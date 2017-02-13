@@ -1,6 +1,6 @@
 **Vehicle Detection Project**
 
-This is my submission writeup for the vehicle detection project. This was actually an interesting project, though I wonder quite a bit about the details of improving the performance and running time of any solution, to be able to work on limited resources (as in an actual car). I suspect a FPGA implementation could do the trick (In fact, I see no other way to do this in a reasonable time!). Nevertheless, as a simple comment of mine, at some moment I tried to make a DNN version of this whole project, but that would have taken way way too long, though I did find a way (this is not rally difficult) in which it could reasonably work. But in the end, since that would have taken too long, I ended up using a simple SVM.
+This is my (second) submission writeup for the vehicle detection project. This was actually an interesting project, though I wonder quite a bit about the details of improving the performance and running time of any solution, to be able to work on limited resources (as in an actual car). I suspect a FPGA implementation could do the trick (In fact, I see no other way to do this in a reasonable time!). Nevertheless, as a simple comment of mine, at some moment I tried to make a DNN version of this whole project, but that would have taken way way too long, though I did find a way (this is not rally difficult) in which it could reasonably work. But in the end, since that would have taken too long, I ended up using a simple SVM.
 
 [//]: # (Image References)
 [image1]: ./images/hog.png
@@ -36,7 +36,7 @@ I trained a linear SVM using the obtained hog features as obtained above, and al
 
 I also used histogram features. diving the color features obtained before into 32 bins. 32 seemed a good number, but there is little justification for this. 
 
-Then I trained the SVM using all the images in the provided datasets, after calculating the features for all of them. I plotted the results of the SVM to see which threshold for the calculated distance by the SVM would be a good choice, to better prune false positives, and 0.4 seemed ok. 
+Then I trained the SVM using all the images in the provided datasets, after calculating the features for all of them. I plotted the results of the SVM to see which threshold for the calculated distance by the SVM would be a good choice, to better prune false positives, and 0.4 seemed ok at first, but I had to raise it to 0.9 to deal with false positives when lowering the threshold for the heatmap, as in the first submission the white car kept on not being recognized at times.
 
 ###Sliding Window Search
 
@@ -45,7 +45,7 @@ Then I trained the SVM using all the images in the provided datasets, after calc
 
 Since I did not want to manually set some sort of search area and assign window sizes, I did this algorithmically. The idea is very simple, after idenifying the region where the centers of the cars could be (idealizing this as a trapezoid), I divide this region into horizontal segments. The separations of the segments define lines where to slide, horizontally, the search windows. The search windows size is then calculated linearly, assuimg certain size at the bottom line, an 0 at the top. For each size, 'variations' are allowed as well, as it could happen due to geometry or angle of the road that these estimates are wrong. Finally, a minimal size is set, so no search window can be less than this, to disallow unneeded applications of the search function. There is some degree of overlap allowed for the seach windows when sliding horizontally as well. 
 
-I also tried a 'quadratic' (rather following a traingular series) algorithm for scaling the size of the search windows, but it did not work as well.
+I also tried a 'quadratic' (rather following a traingular series) algorithm for scaling the size of the search windows, but it did not work as well. However for the second submission I used both. I suspect a clever choice of windows could help a lot, and also, perhaps the heat map itself could hint locations for dense cluster of windows aiding in recognition.
 
 So, for each search window, the entire pipeline described above is applied, the SVM distance is then thresholded, and an evaluation of 'carness' is provided.
 
@@ -81,6 +81,8 @@ These 'blobs' are then used, together with the centers, to determine the boundin
 ###Discussion
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+
+Why is the white car so much harder to recognize? I suspect that the classifier is not as happy to pronounce it a car, since it may be a conflict with the white marker, or even cars wheels, or the sky. Again I hope a DCNN could do better, as it could 'easily' encode geometrical information of the cars. As you can see, even though, for the second submission, the car around the white car is generated even when afar, it still dissapears at some moments! I think I could increase the number of frames used even more, though that will increase the false positives too...
 
 I think a DNN could do the car classification much more robustly, much it would take a long time to train, and so in the end I used and SVM. The approach is itself very simple, all the hog, color and color histogram features (for different color spaces) are transformed to signature vectors for each image. These are then normalized, and then feed to the SVM for training. The SVM is used on a sliding window approach, and the found car windows are then added to a heat map of the last 10 frames. The heatmap is thresholded, and the car blob are identified in it. The 'extension' of these blobs is then used to calculate bounding boxes for the cars, which are then added to the generated video.
 
